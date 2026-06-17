@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integer Addition & Subtraction</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; padding: 2rem 1rem; }
+    .app { max-width: 720px; margin: 0 auto; }
+
+    h1 { font-size: 28px; font-weight: 700; color: #1a237e; margin-bottom: 4px; }
+    .subtitle { font-size: 16px; color: #666; margin-bottom: 1.8rem; }
+
+    .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 16px 20px; }
+    .ctrl-group { display: flex; align-items: center; gap: 10px; }
+    .ctrl-group label { font-size: 15px; font-weight: 500; color: #444; white-space: nowrap; }
+    .ctrl-group input[type=range] { width: 120px; accent-color: #1a237e; }
+    .ctrl-group .val { font-size: 20px; font-weight: 700; color: #1a237e; min-width: 36px; text-align: center; }
+
+    .cases-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .case-card { background: #fff; border: 1.5px solid #ddd; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: box-shadow .15s; }
+    .case-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .case-card.active { border-width: 2.5px; }
+    .case-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .case-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .case-label { font-size: 13px; font-weight: 600; }
+    .case-rule { font-size: 12px; color: #777; margin-bottom: 8px; padding-left: 18px; line-height: 1.5; }
+    .case-expr { font-size: 20px; font-weight: 500; padding-left: 18px; }
+    .case-result { font-size: 13px; color: #888; margin-top: 3px; padding-left: 18px; }
+
+    .nl-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .nl-header { font-size: 15px; font-weight: 600; color: #1a237e; margin-bottom: 12px; text-align: center; }
+    canvas { display: block; width: 100%; height: auto; }
+
+    .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .rule-pill { font-size: 13px; padding: 7px 14px; border-radius: 8px; font-weight: 500; text-align: center; }
+
+    .key-box { background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 14px 18px; }
+    .key-title { font-size: 14px; font-weight: 600; color: #444; margin-bottom: 10px; }
+    .key-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+    .key-row:last-child { margin-bottom: 0; }
+    .key-arrow { font-size: 18px; font-weight: 700; width: 28px; text-align: center; }
+    .key-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+    @media (max-width: 500px) {
+      .cases-grid { grid-template-columns: 1fr; }
+      .rules { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>➕➖ Integer Addition &amp; Subtraction</h1>
+  <p class="subtitle">Use the sliders to explore all four cases on the number line</p>
+
+  <!-- Sliders -->
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Starting number (a):</label>
+      <input type="range" id="sl-a" min="-6" max="6" value="-3" step="1">
+      <span class="val" id="out-a">-3</span>
+    </div>
+    <div class="ctrl-group">
+      <label>Change (b):</label>
+      <input type="range" id="sl-b" min="1" max="6" value="5" step="1">
+      <span class="val" id="out-b">5</span>
+    </div>
+  </div>
+
+  <!-- Four cases -->
+  <div class="cases-grid" id="cases-grid"></div>
+
+  <!-- Number line -->
+  <div class="nl-card">
+    <div class="nl-header" id="nl-header">Click a case above to see it on the number line</div>
+    <canvas id="nl" width="680" height="130"></canvas>
+    <div class="rules">
+      <div class="rule-pill" style="background:#E3F2FD;color:#0D47A1;">➕ positive &nbsp;→&nbsp; move RIGHT</div>
+      <div class="rule-pill" style="background:#FFEBEE;color:#B71C1C;">➕ negative &nbsp;→&nbsp; move LEFT</div>
+      <div class="rule-pill" style="background:#E8F5E9;color:#1B5E20;">➖ positive &nbsp;→&nbsp; move LEFT</div>
+      <div class="rule-pill" style="background:#FFF8E1;color:#E65100;">➖ negative &nbsp;→&nbsp; move RIGHT ✓✓</div>
+    </div>
+  </div>
+
+  <!-- Key -->
+  <div class="key-box">
+    <div class="key-title">Legend</div>
+    <div class="key-row"><div class="key-dot" style="background:#1a237e;"></div> Blue dot = starting point (a)</div>
+    <div class="key-row"><div class="key-dot" style="background:#c62828;"></div> Red dot = ending point (answer)</div>
+    <div class="key-row"><span style="font-size:13px;color:#777;">Curved arrow shows direction and distance of movement</span></div>
+  </div>
+
+</div>
+<script>
+const slA = document.getElementById('sl-a');
+const slB = document.getElementById('sl-b');
+const outA = document.getElementById('out-a');
+const outB = document.getElementById('out-b');
+const grid = document.getElementById('cases-grid');
+const canvas = document.getElementById('nl');
+const ctx = canvas.getContext('2d');
+const nlHeader = document.getElementById('nl-header');
+
+let activeCase = 0;
+
+const COLORS = ['#1565C0','#C62828','#2E7D32','#E65100'];
+const BGS    = ['#E3F2FD','#FFEBEE','#E8F5E9','#FFF8E1'];
+
+function getCases(a, b) {
+  return [
+    { label:'Adding a positive',     expr:`${a} + ${b}`,      result: a+b, color:COLORS[0], bg:BGS[0], dir:'right', rule:`Move RIGHT ${b} steps` },
+    { label:'Adding a negative',     expr:`${a} + (−${b})`,   result: a-b, color:COLORS[1], bg:BGS[1], dir:'left',  rule:`Move LEFT ${b} steps` },
+    { label:'Subtracting a positive',expr:`${a} − ${b}`,      result: a-b, color:COLORS[2], bg:BGS[2], dir:'left',  rule:`Move LEFT ${b} steps` },
+    { label:'Subtracting a negative',expr:`${a} − (−${b})`,   result: a+b, color:COLORS[3], bg:BGS[3], dir:'right', rule:`Double negative → Move RIGHT ${b} steps` },
+  ];
+}
+
+function renderCases() {
+  const a = +slA.value, b = +slB.value;
+  const cases = getCases(a, b);
+  grid.innerHTML = '';
+  cases.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'case-card' + (i === activeCase ? ' active' : '');
+    if (i === activeCase) d.style.borderColor = c.color;
+    d.innerHTML = `
+      <div class="case-top">
+        <div class="case-dot" style="background:${c.color}"></div>
+        <span class="case-label" style="color:${c.color}">${c.label}</span>
+      </div>
+      <div class="case-rule">${c.rule}</div>
+      <div class="case-expr">${c.expr} = <b style="color:${c.color}">${c.result}</b></div>`;
+    d.onclick = () => { activeCase = i; renderCases(); };
+    grid.appendChild(d);
+  });
+  drawNL(cases[activeCase]);
+}
+
+function drawNL(c) {
+  const W = canvas.width, H = canvas.height;
+  const pad = 50, axY = Math.round(H * 0.58);
+  const minV = -10, maxV = 10;
+  const scale = (W - 2*pad) / (maxV - minV);
+  const xOf = v => pad + (v - minV) * scale;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // axis
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad - 15, axY); ctx.lineTo(W - pad + 15, axY);
+  ctx.stroke();
+  // arrowheads
+  ctx.fillStyle = '#bbb';
+  ctx.beginPath(); ctx.moveTo(W-pad+15,axY); ctx.lineTo(W-pad+5,axY-5); ctx.lineTo(W-pad+5,axY+5); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pad-15,axY);   ctx.lineTo(pad-5,axY-5);   ctx.lineTo(pad-5,axY+5);   ctx.fill();
+
+  // ticks & labels
+  ctx.textAlign = 'center';
+  ctx.font = '13px system-ui';
+  for (let v = minV; v <= maxV; v++) {
+    const x = xOf(v);
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, axY-5); ctx.lineTo(x, axY+5); ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.fillText(v, x, axY + 22);
+  }
+
+  const a = +slA.value;
+  const startX = xOf(a);
+  const endX   = xOf(c.result);
+  const arcPeak = axY - 52;
+
+  // curved arrow
+  ctx.beginPath();
+  ctx.strokeStyle = c.color;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([]);
+  const cpX1 = startX + (endX - startX) * 0.25;
+  const cpX2 = startX + (endX - startX) * 0.75;
+  ctx.moveTo(startX, axY);
+  ctx.bezierCurveTo(cpX1, arcPeak, cpX2, arcPeak, endX, axY);
+  ctx.stroke();
+
+  // arrowhead at end
+  const dir = endX >= startX ? 1 : -1;
+  ctx.beginPath();
+  ctx.fillStyle = c.color;
+  ctx.moveTo(endX, axY + 1);
+  ctx.lineTo(endX - dir*12, axY - 8);
+  ctx.lineTo(endX - dir*12, axY + 8);
+  ctx.fill();
+
+  // direction label on arc
+  ctx.fillStyle = c.color;
+  ctx.font = '500 13px system-ui';
+  ctx.textAlign = 'center';
+  const midX = (startX + endX) / 2;
+  ctx.fillText(c.dir === 'right' ? '→ move right' : '← move left', midX, arcPeak - 10);
+
+  // start dot (blue)
+  ctx.beginPath();
+  ctx.arc(startX, axY, 9, 0, Math.PI*2);
+  ctx.fillStyle = '#1a237e'; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('a', startX, axY + 4);
+
+  // end dot (colored)
+  ctx.beginPath();
+  ctx.arc(endX, axY, 9, 0, Math.PI*2);
+  ctx.fillStyle = c.color; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px system-ui';
+  ctx.fillText(c.result, endX, axY + 4);
+
+  nlHeader.textContent = `${c.expr} = ${c.result}   (${c.label})`;
+}
+
+slA.oninput = () => { outA.textContent = slA.value; renderCases(); };
+slB.oninput = () => { outB.textContent = slB.value; renderCases(); };
+renderCases();
+</script>
+</body>
+</html>
